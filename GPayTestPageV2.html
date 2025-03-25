@@ -1,0 +1,262 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Google Pay Demo</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script async src="https://pay.google.com/gp/p/js/pay.js" onload="onGooglePayLoaded()"></script>
+    
+    <style>
+    	
+     .header {
+     	text-align:center;
+     	border-bottom:1px solid lightgray;
+     }
+    
+    </style>
+</head>
+
+<body>
+
+	<div class = "header">
+    	<h2>Google Pay Demo</h2>
+    </div>
+    <br>
+<div class="container">
+    <div id="inputSection">
+
+        <form class="form-horizontal">
+        
+       		 <div class="form-group row">
+                <label class="control-label col-xs-3" for="gateway">Gateway Id:</label>
+                <div class="col-xs-6">
+                    <input class="form-control" type="text" id="gateway" style="min-width: 100%;  width: 100%;" value="frontstreampayments">
+                </div>
+            </div>
+            
+            <div class="form-group row">
+                <label class="control-label col-xs-3" for="gatewayMerchantId">Gateway MerchantId:</label>
+                <div class="col-xs-6">
+                    <input class="form-control" type="text" id="gatewayMerchantId" value="googletest">
+                </div>
+            </div>
+            
+<!-- 
+            <div class="form-group row">
+                <label class="control-label col-xs-3" for="CardNetworks">Card Networks:</label>
+                <div class="col-xs-6">
+                    <select class="form-select" aria-label="">
+  						<option value="AMEX">AMEX</option>
+  						<option value="DISCOVER">DISCOVER</option>
+  						<option value="INTERAC">INTERAC</option>
+  						<option value="JCB">JCB</option>
+  						<option value="MASTERCARD">MASTERCARD</option>
+  						<option value="VISA">VISA</option>
+					</select>
+                </div>
+            </div>
+ -->
+        
+            <div class="form-group row">
+                <label class="control-label col-xs-3" for="totalPrice">Total Price:</label>
+                <div class="col-xs-6">
+                    <input class="form-control" type="number" id="totalPrice" value="1.00">
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-xs-3" for="currencyCode">Currency Code:</label>
+                <div class="col-xs-6">
+                    <input class="form-control" type="text" id="currencyCode" value="USD">
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-xs-3" for="countryCode">Country Code:</label>
+                <div class="col-xs-6">
+                    <input class="form-control" type="text" id="countryCode" value="US">
+                </div>
+            </div>
+        </form>
+
+        <div class="form-group row" >
+            <div id="pay" class="col-xs-6" style="text-align:center">
+                
+            </div>
+        </div>
+    </div>
+
+    <div id="outputSection">
+		<div style="border-top:2px solid lightgray; padding-bottom:5px;">
+			<h4>GooglePay Payload Response: </h4>
+		</div>
+        <textarea id="response" style="width: 100%; max-width: 100%; min-height: 100px; max-height: 100%;"></textarea>
+		
+		<div style="border-top:2px solid lightgray; padding-bottom:5px;">
+			<h4>ExtData: </h4>
+		</div>
+        <textarea id="wallettag" style="width: 100%; max-width: 100%; min-height: 100px; max-height: 100%;"></textarea>
+		
+    </div>
+    <br>
+    <br>
+</div>
+
+<script>
+
+const allowedCardAuthMethods = ["PAN_ONLY", "CRYPTOGRAM_3DS"];
+const allowedCardNetworks = ["AMEX", "DISCOVER", "INTERAC", "JCB", "MASTERCARD", "VISA"];
+var gatewayid;
+var gatewaymerchantid;
+
+const baseRequest = {
+  apiVersion: 2,
+  apiVersionMinor: 0
+};
+
+let paymentsClient = null;
+
+function onGooglePayLoaded() {
+  const paymentsClient = getGooglePaymentsClient();
+  paymentsClient.isReadyToPay(getGoogleIsReadyToPayRequest())
+      .then(function(response) {
+        if (response.result) {
+          addGooglePayButton();
+          // @todo prefetch payment data to improve performance after confirming site functionality
+          // prefetchGooglePaymentData();
+        }
+      })
+      .catch(function(err) {
+        // show error in developer console for debugging
+        console.error(err);
+      });
+}
+
+function getGooglePaymentsClient() {
+  if ( paymentsClient === null ) {
+    paymentsClient = new google.payments.api.PaymentsClient({environment: 'TEST'});
+  }
+  return paymentsClient;
+}
+
+function getGoogleIsReadyToPayRequest() {
+  return Object.assign(
+      {},
+      baseRequest,
+      {
+        allowedPaymentMethods: [baseCardPaymentMethod]
+      }
+  );
+}
+
+const baseCardPaymentMethod = {
+  type: 'CARD',
+  parameters: {
+    allowedAuthMethods: allowedCardAuthMethods,
+    allowedCardNetworks: allowedCardNetworks,
+	billingAddressRequired: true,
+	billingAddressParameters: {'format': 'FULL'}
+  }
+};
+
+function addGooglePayButton() {
+  const paymentsClient = getGooglePaymentsClient();
+  const button =
+      paymentsClient.createButton({onClick: onGooglePaymentButtonClicked});
+  document.getElementById('pay').appendChild(button);
+}
+
+function onGooglePaymentButtonClicked() {
+    const paymentsClient = getGooglePaymentsClient();
+
+   //gatewayid = document.getElementById('gateway').value; 
+  // gatewaymerchantid = document.getElementById('gatewayMerchantId').value; 
+
+     
+   const paymentDataRequest = getGooglePaymentDataRequest();
+    paymentDataRequest.allowedPaymentMethods[0].tokenizationSpecification.parameters.gateway = document.getElementById('gateway').value;
+   paymentDataRequest.allowedPaymentMethods[0].tokenizationSpecification.parameters.gatewayMerchantId = document.getElementById('gatewayMerchantId').value;
+
+   
+   paymentDataRequest.transactionInfo = getGoogleTransactionInfo();
+   
+ 
+ 
+   paymentsClient.loadPaymentData(paymentDataRequest)
+       .then(function(paymentData) {
+ 
+        console.log("paymentData", paymentData);
+         // handle the response
+         processPayment(paymentData);
+       })
+       .catch(function(err) {
+         // show error in developer console for debugging
+         //console.error("error", err);
+		if(err.statusMessage!= undefined){ document.getElementById("response").innerHTML  = err.statusMessage;}
+		else {
+		 document.getElementById("response").innerHTML  = err;
+		 document.getElementById("wallettag").innerHTML  = err;}
+       });
+}
+
+function getGooglePaymentDataRequest() {
+  const paymentDataRequest = Object.assign({}, baseRequest);
+  paymentDataRequest.allowedPaymentMethods = [cardPaymentMethod];
+  paymentDataRequest.transactionInfo = getGoogleTransactionInfo();
+  paymentDataRequest.merchantInfo = {
+    // @todo a merchant ID is available for a production environment after approval by Google
+    // See {@link https://developers.google.com/pay/api/web/guides/test-and-deploy/integration-checklist|Integration checklist}    
+    //merchantId: '0123456789',
+    merchantName: 'Example Merchant'
+  };
+  return paymentDataRequest;
+}
+
+function getGoogleTransactionInfo() {
+  return {
+    countryCode: document.getElementById('countryCode').value,
+    currencyCode: document.getElementById('currencyCode').value,   
+    totalPriceStatus: 'FINAL',
+    // set to cart total
+    totalPrice: document.getElementById('totalPrice').value
+  };
+}
+
+function getGooglePaymentsClient() {
+  if ( paymentsClient === null ) {
+    paymentsClient = new google.payments.api.PaymentsClient({environment: 'TEST'});
+  }
+
+  return paymentsClient;
+}
+
+function processPayment(paymentData) {
+  // show returned data in developer console for debugging
+    console.log("paymentdata:" , paymentData);
+  // @todo pass payment token to your gateway to process payment
+  paymentToken = paymentData.paymentMethodData.tokenizationData.token;
+  console.log("paymentToken", paymentToken);    
+	document.getElementById("response").innerHTML = JSON.stringify(paymentData);
+	document.getElementById("wallettag").innerHTML = "<Force>T</Force><CardType>GOOGLEPAY</CardType><Wallet><EncryptedPaymentData>" + JSON.stringify(paymentData) + "</EncryptedPaymentData></Wallet>";
+}
+
+const tokenizationSpecification = {
+  type: 'PAYMENT_GATEWAY',
+  parameters: {
+    'gateway': gatewayid,   
+    'gatewayMerchantId':  gatewaymerchantid,   
+  }
+};
+
+const cardPaymentMethod = Object.assign(
+  {},
+  baseCardPaymentMethod,
+  {
+    tokenizationSpecification: tokenizationSpecification
+  }
+);
+
+
+</script>
+</body>
+</html>
